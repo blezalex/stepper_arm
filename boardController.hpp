@@ -70,9 +70,9 @@ public:
 
 		switch (current_state) {
 		case State::Stopped:
-			ppm_motor1_.set(NEUTRAL_MOTOR_CMD);
-			ppm_motor2_.set(NEUTRAL_MOTOR_CMD);
-			ppm_motor3_.set(NEUTRAL_MOTOR_CMD);
+			ppm_motor1_.set(0);
+			ppm_motor2_.set(0);
+			ppm_motor3_.set(0);
 
 			status_led_.setState(0);
 			beeper_.setState(0);
