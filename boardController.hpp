@@ -94,7 +94,7 @@ public:
 		case State::Running:
 			float fwd;
 			float right;
-			float yaw = yaw_pid_controler_.compute(update.gyro[3]);
+			float yaw = yaw_pid_controler_.compute(update.gyro[2]);
 
 			if (current_state == State::Starting){
 				fwd = pitch_balancer_.computeStarting(update.gyro, (float*)imu_.angles, state_.start_progress());
