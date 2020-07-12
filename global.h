@@ -20,7 +20,7 @@
 
 // ****** start mode settings *********/
 #define START_MAX_POWER 300 // [-START_MAX_POWER: +START_MAX_POWER] out of MOTOR_CMD_RANGE
-#define START_DURATION 500 // in ms. Time to bring board from tilted to balanced.
+#define START_DURATION 1500 // in ms. Time to bring board from tilted to balanced.
 
 #define START_ANGLE_DRIVE 12
 #define START_ANGLE_DRIVE_FULL 6

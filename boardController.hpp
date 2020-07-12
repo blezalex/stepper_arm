@@ -94,11 +94,11 @@ public:
 		case State::Running:
 			float fwd;
 			float right;
-			float yaw = yaw_pid_controler_.compute(update.gyro[2]);
+			float yaw = yaw_pid_controler_.compute(update.gyro[2])  * state_.start_progress();
 
 			if (current_state == State::Starting){
-				fwd = pitch_balancer_.computeStarting(update.gyro, (float*)imu_.angles, state_.start_progress());
-				right = roll_balancer_.computeStarting(update.gyro, (float*)imu_.angles, state_.start_progress());
+				fwd = pitch_balancer_.computeStarting(update.gyro, (float*)imu_.angles, state_.start_progress()) * state_.start_progress();
+				right = roll_balancer_.computeStarting(update.gyro, (float*)imu_.angles, state_.start_progress()) * state_.start_progress();
 			}
 			else {
 				fwd = pitch_balancer_.compute(update.gyro, (float*)imu_.angles, 0);
@@ -109,9 +109,9 @@ public:
 		  float v2 = yaw + cos(radians(120)) * right - sin(radians(120)) * fwd;
 		  float v3 = yaw + right;
 
-			ppm_motor1_.set(v1);
-			ppm_motor2_.set(v2);
-			ppm_motor3_.set(v3);
+			ppm_motor1_.set(-v1);
+			ppm_motor2_.set(-v2);
+			ppm_motor3_.set(-v3);
 			break;
 		}
 
