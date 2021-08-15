@@ -111,16 +111,6 @@ int main(void) {
   IWDG_Enable();
 
 
-  PwmOut::InitAll();
-
-  PwmOut motor_out1(1);
-  motor_out1.set(NEUTRAL_MOTOR_CMD);
-
-  PwmOut motor_out2(2);
-  motor_out2.set(NEUTRAL_MOTOR_CMD);
-
-  PwmOut motor_out3(3);
-  motor_out3.set(NEUTRAL_MOTOR_CMD);
 
   initArduino();
 
@@ -179,7 +169,11 @@ int main(void) {
   LPF v_in_lpf(&cfg.misc.volt_rc);
   LPF duty_lpf(&cfg.misc.duty_rc);
 
-  BoardController main_ctrl(&cfg, imu, motor_out1, motor_out2, motor_out3, status_led, beeper, guards,
+  StepperOut::InitAll();
+  StepperOut motor1(0);
+  StepperOut motor2(1);
+
+  BoardController main_ctrl(&cfg, imu, &motor1, &motor2, status_led, beeper, guards,
                             guards_count, green_led, &vesc);
 
   accGyro.setListener(&main_ctrl);
@@ -202,7 +196,7 @@ int main(void) {
           debug[write_pos++] = (int8_t)imu.angles[ANGLE_DRIVE];
           break;
         case 2:
-          debug[write_pos++] = (int8_t)((motor_out1.get() - 1500) / 4);
+          debug[write_pos++] = 0;
           break;
         case 3:
           debug[write_pos++] = (int8_t)(imu.angles[ANGLE_DRIVE] * 10);

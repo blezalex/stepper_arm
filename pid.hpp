@@ -10,59 +10,37 @@ public:
 	    reset();
 	}
 
-	float compute(float error, float de, float ierror) {
-		ierror =  constrain(ierror, -_params->max_i, _params->max_i);
-		ierror = ierror * _params->i / 100; // scale it up by I, and by 100 to get close to old configs
-		_sumI +=  ierror;
-		_sumI = constrain(_sumI, -1, 1); // limit to range
+	float compute(float error) {
+		float de = error = - _prev_error;
+		_prev_error = error;
 
-		return  error * _params->p + de * _params->d + applyExpoPoly(_sumI,_params->i_expo)  * MOTOR_CMD_RANGE;
+		// Cumulative sumI changes slowly, it is OK to use I value from previous iteration here.
+		float output =  error * _params->p + de * _params->d + applyExpoPoly(_sumI,_params->i_expo);
+
+		float ierror = constrain(error, -_params->max_i, _params->max_i);
+		ierror = error * _params->i;
+		// Accumulate I unless windup is detected.
+		if ((output < 1 && output > -1) ||
+				(output > 1 && ierror < 0) ||
+				(output < -1 && ierror > 0)) {
+			_sumI += ierror;
+			_sumI = constrain(_sumI, -1, 1); // limit to range
+		}
+
+		return output;
 	}
 
 	void reset() {
 		_sumI = 0;
+		_prev_error = 0;
 	}
 
 private:
 	const Config_PidConfig* _params;
 	float _sumI;
+	float _prev_error;
 
 	DISALLOW_COPY_AND_ASSIGN(PidController);
-};
-
-
-class PidControllerBasic {
-public:
-	PidControllerBasic(const Config_PidConfig* params) {
-		_params = params;
-		reset();
-	}
-
-	float compute(float error)
-	{
-		return compute(error, error - _prevError);
-	}
-
-	float compute(float error, float de)
-	{
-		float out = error * _params->p + de * _params->d + _sumI * _params->i;
-
-		_prevError = error;
-		_sumI = constrain(_sumI + error, -_params->max_i, _params->max_i);
-
-		return out;
-	}
-
-	void reset()
-	{
-		_sumI = 0;
-		_prevError = 0;
-	}
-
-private:
-	const Config_PidConfig* _params;
-	float _prevError;
-	float _sumI;
 };
 
 #endif

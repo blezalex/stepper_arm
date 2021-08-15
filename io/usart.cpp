@@ -79,7 +79,7 @@ int32_t Usart::Read(uint8_t* data, int32_t max_size) {
 		return 0;
 
 	int bytes_available = (RX_BUFFER_SIZE + rxBufferWriteIdx - rxBufferReadIdx) % RX_BUFFER_SIZE;
-	int bytes_to_copy = min(max_size, bytes_available);
+	int bytes_to_copy = MIN(max_size, bytes_available);
 	for (int i = 0; i < bytes_to_copy; i++) {
 		data[i] = rxBuffer[rxBufferReadIdx++];
 		if (rxBufferReadIdx >= RX_BUFFER_SIZE)
