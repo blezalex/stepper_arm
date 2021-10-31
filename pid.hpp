@@ -11,7 +11,7 @@ public:
 	}
 
 	float compute(float error) {
-		float de = error = - _prev_error;
+		float de = error - _prev_error;
 		_prev_error = error;
 
 		// Cumulative sumI changes slowly, it is OK to use I value from previous iteration here.

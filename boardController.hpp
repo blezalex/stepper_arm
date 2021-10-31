@@ -27,6 +27,7 @@ public:
 
 
 	void set(float v_steps_sec) {
+		last_set[idx_] = v_steps_sec;
 		if (fabs(v_steps_sec) <  ((float)kSAMPLING_FREQ_HZ / std::numeric_limits<int16_t>::max() )) {
 			// Stopped
 			iterations_between_steps[idx_] =  -1;
@@ -49,28 +50,38 @@ public:
 
 		if (forward[idx_] != requested_fwd) {
 			forward[idx_] = requested_fwd;
-			iterations_left[idx_] = delay_iters;
+			iterations_left[idx_] = 2; // make a step in requested dir right away
 
-			if (idx_ == 0) 	{
-				GPIO_WriteBit(GPIOA, GPIO_Pin_11, (BitAction)requested_fwd);
-			}
-			else {
-				GPIO_WriteBit(GPIOB, GPIO_Pin_7, (BitAction)requested_fwd);
-			}
+			GPIO_WriteBit(kDirPorts[idx_], kDirPins[idx_], (BitAction)requested_fwd);
 			// Raise pin
 		}
 
 	}
 
+	float get() {
+		return last_applied[idx_];
+	}
+
+
+
 	static constexpr int16_t kSAMPLING_FREQ_HZ = 20000;
-	static constexpr int16_t kMOTOR_CNT = 2;
+	static constexpr int16_t kMOTOR_CNT = 3;
+
+	static float last_set[kMOTOR_CNT];
+	static float last_applied[kMOTOR_CNT];
 
 	static int16_t iterations_between_steps[kMOTOR_CNT];
 	static bool forward[kMOTOR_CNT];
 	static int16_t iterations_left[kMOTOR_CNT];
 
+	static constexpr GPIO_TypeDef* kDirPorts[kMOTOR_CNT] = { GPIOA, GPIOB, GPIOB };
+	static constexpr uint16_t kDirPins[kMOTOR_CNT] = { GPIO_Pin_11, GPIO_Pin_7, GPIO_Pin_9 };
+
+	static constexpr GPIO_TypeDef* kStepPorts[kMOTOR_CNT] = { GPIOA, GPIOB, GPIOB };
+	static constexpr uint16_t kStepPins[kMOTOR_CNT] = { GPIO_Pin_8, GPIO_Pin_6, GPIO_Pin_8 };
+
 	static void UpdateStates() {
-		for (size_t motor_idx; motor_idx < kMOTOR_CNT;  motor_idx++) {
+		for (size_t motor_idx = 0; motor_idx < kMOTOR_CNT;  motor_idx++) {
 
 			if (iterations_between_steps[motor_idx] == -1) {
 				// stopped motor;
@@ -81,21 +92,13 @@ public:
 				// reset step pin, reload
 				iterations_left[motor_idx] = iterations_between_steps[motor_idx];
 
-				if (motor_idx == 0) 	{
-					GPIO_ResetBits(GPIOA, GPIO_Pin_8);
-				}
-				else {
-					GPIO_ResetBits(GPIOB, GPIO_Pin_6);
-				}
+				GPIO_ResetBits(kStepPorts[motor_idx], kStepPins[motor_idx]);
 			}
 			else if (--iterations_left[motor_idx] == 0) {
 				// raise step pin.
-				if (motor_idx  == 0) 	{
-					GPIO_SetBits(GPIOA, GPIO_Pin_8);
-				}
-				else {
-					GPIO_SetBits(GPIOB, GPIO_Pin_6);
-				}
+				GPIO_SetBits(kStepPorts[motor_idx], kStepPins[motor_idx]);
+
+				last_applied[motor_idx] = last_set[motor_idx];
 			}
 		}
 	}
@@ -109,7 +112,7 @@ public:
 		GPIO_Init(GPIOA, &GPIO_InitStructure);
 
 		RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-		GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_6 | GPIO_Pin_7;
+		GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_6 | GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9;
 		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
 		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 		GPIO_Init(GPIOB, &GPIO_InitStructure);
@@ -157,6 +160,15 @@ int16_t StepperOut::iterations_between_steps[kMOTOR_CNT];
 int16_t StepperOut::iterations_left[kMOTOR_CNT];
 bool StepperOut::forward[kMOTOR_CNT];
 
+float StepperOut::last_set[kMOTOR_CNT];
+float StepperOut::last_applied[kMOTOR_CNT];
+
+constexpr GPIO_TypeDef* StepperOut::kDirPorts[kMOTOR_CNT];
+constexpr uint16_t StepperOut::kDirPins[kMOTOR_CNT];
+
+constexpr GPIO_TypeDef* StepperOut::kStepPorts[kMOTOR_CNT];
+constexpr uint16_t StepperOut::kStepPins[kMOTOR_CNT];
+
 
 class ConstrainedOut {
 public:
@@ -164,27 +176,32 @@ public:
 		motor_out_(motor_out),
 		motor_out_lpf_(&(balance_settings.output_lpf_rc)), settings_(&balance_settings) {}
 
-	void set(float value) {
-		float out = constrain(value, -1, 1);
-		float new_out = motor_out_lpf_.compute(new_out);
+	void set(float new_out) {
+		new_out = motor_out_lpf_.compute(new_out);
 
-		// !!!!!!!!!!!!!!!!!!! UCOMMENT ME
+		prev_val_= constrain(new_out, prev_val_-25, prev_val_ + 25);
 
-		motor_out_->set(settings_->balance_angle_scaling);
-//		motor_out_->set(new_out);
+		new_out = prev_val_;
+		motor_out_->set(new_out);
 	}
+
+	float get(){ return motor_out_->get(); }
 
 	void reset() {
 		motor_out_lpf_.reset(0);
 
-		// !!!!!!!!!!!!!!!!!!! UCOMMENT ME
+//		float target = settings_->balance_angle_scaling;
+//		prev_val_= constrain(target, prev_val_-25, prev_val_ + 25);
+//		motor_out_->set(prev_val_);
 
-		motor_out_->set(settings_->balance_angle_scaling);
-//		motor_out_->set(0);
+		// !!!!!!!!!!!!!!!!!!! UCOMMENT ME
+		motor_out_->set(0);
 	}
 
 private:
 	StepperOut* motor_out_;
+
+	float prev_val_ = 0;
 
 	BiQuadLpf motor_out_lpf_;
 
@@ -194,7 +211,7 @@ private:
 
 class BoardController  : public UpdateListener  {
 public:
-	BoardController(Config* settings, IMU& imu, StepperOut* motor_out1,  StepperOut* motor_out2, GenericOut& status_led,
+	BoardController(Config* settings, IMU& imu, StepperOut* motor_out1,  StepperOut* motor_out2, StepperOut* motor_out3, GenericOut& status_led,
 			GenericOut& beeper, Guard** guards, int guards_count, GenericOut& green_led, VescComm* vesc)
 	  : settings_(settings),
 		imu_(imu),
@@ -204,9 +221,11 @@ public:
 		yaw_pid_controler_(&(settings_->yaw_pid)),
 		motor1_(motor_out1, settings->balance_settings),
 		motor2_(motor_out2, settings->balance_settings),
+		motor3_(motor_out3, settings->balance_settings),
 		status_led_(status_led),
 		beeper_(beeper),
 		green_led_(green_led),
+		speed_lpf_(&settings_->balance_settings.balance_d_param_lpf_rc),
 
 		vesc_(vesc) {
 	}
@@ -220,14 +239,17 @@ public:
 		case State::Stopped:
 			motor1_.set(0);
 			motor2_.set(0);
+			motor3_.set(0);
 
 			status_led_.setState(0);
 			beeper_.setState(0);
+			speed_lpf_.reset();
 			break;
 
 		case State::FirstIteration:
 			motor1_.reset();
 			motor2_.reset();
+			motor3_.reset();
 
 			pitch_balancer_.reset();
 			roll_balancer_.reset();
@@ -237,6 +259,10 @@ public:
 			// intentional fall through
 		case State::Starting:
 		case State::Running:
+
+			float cur_speed = (motor1_.get() + motor2_.get() * -1) / 2;
+			cur_speed = speed_lpf_.compute(cur_speed);
+
 			float fwd;
 			float yaw = yaw_pid_controler_.compute(update.gyro[2])  * state_.start_progress();
 
@@ -247,6 +273,8 @@ public:
 				fwd = pitch_balancer_.compute(imu_.angles[1], 0);
 			}
 
+			fwd += cur_speed; // Accumulate fwd
+
 			if (fwd < 0) {
 				// The steering is inverted when going backwards
 				yaw *= -1;
@@ -256,13 +284,21 @@ public:
 		  float v2 = fwd - yaw;
 
 			motor1_.set(v1);
-			motor2_.set(v2);
+			motor2_.set(v2 * -1);
+
+			motor3_.set(v1); //////////////////////// !!!!!!!!!!!!!!!!
 			break;
 		}
 	}
 
+	uint32_t debug0() {
+		return debug0_;
+	}
+
 
 private:
+	uint32_t debug0_;
+
 	Config* settings_;
 	IMU& imu_;
 	StateTracker state_;
@@ -272,6 +308,9 @@ private:
 
 	ConstrainedOut motor1_;
 	ConstrainedOut motor2_;
+	ConstrainedOut motor3_;
+
+	LPF speed_lpf_;
 
 	GenericOut& status_led_;
 	GenericOut& beeper_;

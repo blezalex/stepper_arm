@@ -172,8 +172,9 @@ int main(void) {
   StepperOut::InitAll();
   StepperOut motor1(0);
   StepperOut motor2(1);
+  StepperOut motor3(2);
 
-  BoardController main_ctrl(&cfg, imu, &motor1, &motor2, status_led, beeper, guards,
+  BoardController main_ctrl(&cfg, imu, &motor1, &motor2, &motor3, status_led, beeper, guards,
                             guards_count, green_led, &vesc);
 
   accGyro.setListener(&main_ctrl);
@@ -269,7 +270,7 @@ int main(void) {
         Stats stats = Stats_init_default;
         stats.drive_angle = imu.angles[ANGLE_DRIVE];
         stats.stear_angle = imu.angles[ANGLE_STEER];
-//        stats.pad_pressure1 = foot_pad_guard.getLevel(0);
+        stats.pad_pressure1 = main_ctrl.debug0();
 //        stats.pad_pressure2 = foot_pad_guard.getLevel(1);
         stats.batt_current = vesc.mc_values_.avg_input_current;
         stats.batt_voltage = vesc.mc_values_.v_in;

@@ -35,7 +35,7 @@ public:
 	// Returns torque request based on current imu and gyro readings. Expected range is -1:1,
 	// but not limited here to that range.
 	float compute(float angle, float balance_angle) {
-		return balance_pid_.compute(getInput(angle, balance_angle));
+		return balance_pid_.compute(angle);
 	}
 
 	// Compute torque needed while board in starting up phase (coming from one side to balanced state).
@@ -45,7 +45,7 @@ public:
 
 		// TODO!!!!!!!!!!!! DONT ACCUMULATE 'I' while starting
 
-		return balance_pid_.compute(getInput(angle, 0) * pid_P_multiplier);
+		return balance_pid_.compute(angle * pid_P_multiplier);
 	}
 
 private:
