@@ -151,6 +151,11 @@ int main(void) {
   GenericOut beeper(RCC_APB2Periph_GPIOA, GPIOA, GPIO_Pin_12, true);
   beeper.init(true);
 
+  StepperOut::InitAll();
+  StepperOut motor1(0);
+  StepperOut motor2(1);
+  StepperOut motor3(2);
+
   led_controller_init();
   waiter.waitForAccGyroCalibration();
 
@@ -169,10 +174,7 @@ int main(void) {
   LPF v_in_lpf(&cfg.misc.volt_rc);
   LPF duty_lpf(&cfg.misc.duty_rc);
 
-  StepperOut::InitAll();
-  StepperOut motor1(0);
-  StepperOut motor2(1);
-  StepperOut motor3(2);
+
 
   BoardController main_ctrl(&cfg, imu, &motor1, &motor2, &motor3, status_led, beeper, guards,
                             guards_count, green_led, &vesc);

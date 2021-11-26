@@ -35,6 +35,10 @@ public:
 		_prev_error = 0;
 	}
 
+	void resetI() {
+		_sumI = 0;
+	}
+
 private:
 	const Config_PidConfig* _params;
 	float _sumI;

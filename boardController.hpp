@@ -23,8 +23,8 @@ class StepperOut {
 public:
 	StepperOut(int idx) : idx_(idx) {
 		if (idx >= kMOTOR_CNT) while(1);
+		set(0);
 	}
-
 
 	void set(float v_steps_sec) {
 		last_set[idx_] = v_steps_sec;
@@ -177,9 +177,11 @@ public:
 		motor_out_lpf_(&(balance_settings.output_lpf_rc)), settings_(&balance_settings) {}
 
 	void set(float new_out) {
+		new_out= new_out * settings_->usart_control_scaling;
+
 		new_out = motor_out_lpf_.compute(new_out);
 
-		prev_val_= constrain(new_out, prev_val_-25, prev_val_ + 25);
+		prev_val_= constrain(new_out, prev_val_-15, prev_val_ + 15);
 
 		new_out = prev_val_;
 		motor_out_->set(new_out);
@@ -189,6 +191,7 @@ public:
 
 	void reset() {
 		motor_out_lpf_.reset(0);
+		prev_val_ = 0;
 
 //		float target = settings_->balance_angle_scaling;
 //		prev_val_= constrain(target, prev_val_-25, prev_val_ + 25);
@@ -241,6 +244,8 @@ public:
 			motor2_.set(0);
 			motor3_.set(0);
 
+			speed1_ = speed2_ = speed3_ = 0;
+
 			status_led_.setState(0);
 			beeper_.setState(0);
 			speed_lpf_.reset();
@@ -260,33 +265,35 @@ public:
 		case State::Starting:
 		case State::Running:
 
-			float cur_speed = (motor1_.get() + motor2_.get() * -1) / 2;
-			cur_speed = speed_lpf_.compute(cur_speed);
+			// TODO:!!! TRY cascading rate + andle pid controllers
+
+			
+			//float yaw = yaw_pid_controler_.compute(update.gyro[2])  * state_.start_progress();
+			float yaw = 0;
 
 			float fwd;
-			float yaw = yaw_pid_controler_.compute(update.gyro[2])  * state_.start_progress();
-
+			float right;
 			if (current_state == State::Starting){
-				fwd = pitch_balancer_.computeStarting(imu_.angles[1], state_.start_progress());
+				fwd = pitch_balancer_.computeStarting(imu_.angles[1], update.gyro[1], state_.start_progress());
+				right = roll_balancer_.computeStarting(imu_.angles[0], -update.gyro[0], state_.start_progress());
 			}
 			else {
-				fwd = pitch_balancer_.compute(imu_.angles[1], 0);
+				fwd = pitch_balancer_.compute(imu_.angles[1], update.gyro[1]);
+				right = roll_balancer_.compute(imu_.angles[0], -update.gyro[0]);
 			}
 
-			fwd += cur_speed; // Accumulate fwd
+			float acc_1 = yaw + right;
+			float acc_2 = yaw + cos(radians(120)) * right - sin(radians(120)) * fwd;
+		  float acc_3 = yaw + cos(radians(120)) * right + sin(radians(120)) * fwd;
 
-			if (fwd < 0) {
-				// The steering is inverted when going backwards
-				yaw *= -1;
-			}
+		  speed1_ += acc_1;
+		  speed2_ += acc_2;
+		  speed3_ += acc_3;
+		  
+			motor1_.set(speed1_);
+			motor2_.set(speed2_);
+			motor3_.set(speed3_);
 
-		  float v1 = fwd + yaw;
-		  float v2 = fwd - yaw;
-
-			motor1_.set(v1);
-			motor2_.set(v2 * -1);
-
-			motor3_.set(v1); //////////////////////// !!!!!!!!!!!!!!!!
 			break;
 		}
 	}
@@ -316,6 +323,10 @@ private:
 	GenericOut& beeper_;
 
 	GenericOut& green_led_;
+
+  float speed1_;
+  float speed2_;
+  float speed3_;
 
 	VescComm* vesc_;
 	int vesc_update_cycle_ctr_ = 0;
