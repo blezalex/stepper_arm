@@ -15,6 +15,7 @@
 #include "stm32f10x_tim.h"
 #include "stm32f10x_rcc.h"
 #include "stm32f10x_gpio.h"
+#include "io/rx.h"
 
 #define BRAKE_VIA_USART
 
@@ -233,6 +234,14 @@ public:
 		vesc_(vesc) {
 	}
 
+	float mapRcInput(uint16_t input) {
+		if (input < MIN_MOTOR_CMD || input > MAX_MOTOR_CMD ) {
+			return 0;
+		}
+
+		return fmap(input, MIN_MOTOR_CMD, MAX_MOTOR_CMD, -1, 1);
+	}
+
 	// Main control loop. Runs at 1000hz Must finish in less than 1ms otherwise controller will freeze.
 	void processUpdate(const MpuUpdate& update) {
 		imu_.compute(update);
@@ -265,21 +274,22 @@ public:
 		case State::Starting:
 		case State::Running:
 
-			// TODO:!!! TRY cascading rate + andle pid controllers
-
+			float fwdTargetAngle = mapRcInput(rxVals[1]) * 5;
+			float rightTargetAngle = mapRcInput(rxVals[0]) * 5;
 			
 			//float yaw = yaw_pid_controler_.compute(update.gyro[2])  * state_.start_progress();
-			float yaw = 0;
+			float yaw = 0;// mapRcInput(rxVals[4]) * 10;
 
 			float fwd;
 			float right;
 			if (current_state == State::Starting){
-				fwd = pitch_balancer_.computeStarting(imu_.angles[1], update.gyro[1], state_.start_progress());
-				right = roll_balancer_.computeStarting(imu_.angles[0], -update.gyro[0], state_.start_progress());
+				speed1_ = speed2_ = speed3_ = 0;
+				fwd = pitch_balancer_.computeStarting(imu_.angles[1] - fwdTargetAngle, update.gyro[1], state_.start_progress());
+				right = roll_balancer_.computeStarting(imu_.angles[0] - rightTargetAngle, -update.gyro[0], state_.start_progress());
 			}
 			else {
-				fwd = pitch_balancer_.compute(imu_.angles[1], update.gyro[1]);
-				right = roll_balancer_.compute(imu_.angles[0], -update.gyro[0]);
+				fwd = pitch_balancer_.compute(imu_.angles[1] - fwdTargetAngle, update.gyro[1]);
+				right = roll_balancer_.compute(imu_.angles[0] - rightTargetAngle, -update.gyro[0]);
 			}
 
 			float acc_1 = yaw + right;

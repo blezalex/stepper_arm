@@ -18,6 +18,7 @@ public:
 		rate_pid_.reset();
 		d_lpf_.reset();
 		max_D_multiplier_so_far_ = 0;
+		prev_error_ = 0;
 	}
 
 	float getInput(float angle, float balance_angle) {
@@ -32,24 +33,31 @@ public:
 		}
 	}
 
+	float calcRatePid(float rateRequest,  float rate) {
+		float error = rateRequest * 100 - rate;
+		float d_term  = error - prev_error_;
+		prev_error_ = error;
+		d_term = d_lpf_.compute(d_term);
+		return rate_pid_.compute(error, d_term);
+	}
+
 	// Compute torque needed while board in normal mode.
 	// Returns torque request based on current imu and gyro readings. Expected range is -1:1,
 	// but not limited here to that range.
 	float compute(float angle, float rate) {
 		float rateRequest = angle_pid_.compute(angle);
-		return rate_pid_.compute(rateRequest * 100 - rate);
+		return calcRatePid(rateRequest, rate);
 	}
 
 	// Compute torque needed while board in starting up phase (coming from one side to balanced state).
 	// Returns torque request based on current imu and gyro readings. Expected range is -1:1,
 	// but not limited here to that range.
 	int16_t computeStarting(float angle, float rate, float pid_P_multiplier) {
-
 		rate_pid_.resetI();
 		angle_pid_.resetI();
 		float rateRequest = angle_pid_.compute(angle);
 		rateRequest *= pid_P_multiplier;
-		return rate_pid_.compute(rateRequest * 100 - rate);
+		return calcRatePid(rateRequest, rate);
 	}
 
 private:
@@ -58,5 +66,6 @@ private:
 	BiQuadLpf d_lpf_;
 	PidController angle_pid_;
 	PidController rate_pid_;
-	int axis_;
+	float prev_error_;
+
 };

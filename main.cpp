@@ -25,8 +25,8 @@
 #include "imu/imu.hpp"
 #include "io/genericOut.hpp"
 #include "io/i2c.hpp"
-#include "io/pwm_out.hpp"
 #include "io/usart.hpp"
+#include "io/rx.h"
 #include "ledController.hpp"
 #include "lpf.hpp"
 #include "pid.hpp"
@@ -34,13 +34,24 @@
 #include "stm32f10x_adc.h"
 
 extern "C" void EXTI15_10_IRQHandler(void) {
-  //	GPIOA->BSRR = GPIO_Pin_11;
   if (EXTI_GetITStatus(MPU6050_INT_Exti))  // MPU6050_INT
   {
     EXTI_ClearITPendingBit(MPU6050_INT_Exti);
     mpuHandleDataReady();
   }
-  //	GPIOA->BRR = GPIO_Pin_11;
+}
+
+extern "C" void EXTI0_IRQHandler(void) {
+	constexpr uint32_t line = EXTI_Line0;
+
+  // GPIOB->BSRR = GPIO_Pin_3;
+  if (EXTI_GetITStatus(line))
+  {
+    EXTI_ClearITPendingBit(line);
+    on_ppm_interrupt();
+  }
+  
+  // GPIOB->BRR = GPIO_Pin_3;
 }
 
 class InitWaiter : public UpdateListener {
@@ -85,6 +96,31 @@ void applyCalibrationConfig(const Config &cfg, Mpu *accGyro) {
                             (int16_t)cfg.callibration.acc_y,
                             (int16_t)cfg.callibration.acc_z};
   accGyro->applyAccZeroOffsets(acc_offsets);
+}
+
+void initRx() {
+	/* GPIO configuration */
+	GPIO_InitTypeDef  GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_0;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPD;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource0);
+
+	EXTI_InitTypeDef EXTI_InitStructure;
+	EXTI_InitStructure.EXTI_Line = EXTI_Line0;
+	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+	EXTI_Init(&EXTI_InitStructure);
+
+	NVIC_InitTypeDef NVIC_InitStructure;
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI0_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
 }
 
 int main(void) {
@@ -155,6 +191,8 @@ int main(void) {
   StepperOut motor1(0);
   StepperOut motor2(1);
   StepperOut motor3(2);
+
+  initRx();
 
   led_controller_init();
   waiter.waitForAccGyroCalibration();
@@ -272,10 +310,12 @@ int main(void) {
         Stats stats = Stats_init_default;
         stats.drive_angle = imu.angles[ANGLE_DRIVE];
         stats.stear_angle = imu.angles[ANGLE_STEER];
-        stats.pad_pressure1 = main_ctrl.debug0();
-//        stats.pad_pressure2 = foot_pad_guard.getLevel(1);
-        stats.batt_current = vesc.mc_values_.avg_input_current;
-        stats.batt_voltage = vesc.mc_values_.v_in;
+        stats.pad_pressure1 = rxVals[0];
+        stats.pad_pressure1 = rxVals[1];
+        stats.batt_current = rxVals[0];
+        stats.batt_voltage = rxVals[1];
+//        stats.batt_current = vesc.mc_values_.avg_input_current;
+//        stats.batt_voltage = vesc.mc_values_.v_in;
         stats.motor_current = vesc.mc_values_.avg_motor_current;
         stats.distance_traveled = vesc.mc_values_.tachometer_abs;
         stats.speed = vesc.mc_values_.rpm;
