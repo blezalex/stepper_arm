@@ -182,16 +182,17 @@ class ConstrainedOut {
 public:
 	ConstrainedOut(StepperOut* motor_out, Config_BalancingConfig& balance_settings) :
 		motor_out_(motor_out),
-		motor_out_lpf_(&(balance_settings.output_lpf_rc)), settings_(&balance_settings) {}
+		motor_out_lpf_(&(balance_settings.output_lpf_rc)), settings_(&balance_settings) {
+			reset();
+		}
 
 	void set(float new_out) {
 		new_out= new_out * settings_->usart_control_scaling;
 
+		new_out = constrain(new_out, prev_val_-15, prev_val_ + 15);
 		new_out = motor_out_lpf_.compute(new_out);
+		prev_val_ = new_out;
 
-		prev_val_= constrain(new_out, prev_val_-15, prev_val_ + 15);
-
-		new_out = prev_val_;
 		motor_out_->set(new_out);
 	}
 
@@ -201,19 +202,13 @@ public:
 		motor_out_lpf_.reset(0);
 		prev_val_ = 0;
 
-//		float target = settings_->balance_angle_scaling;
-//		prev_val_= constrain(target, prev_val_-25, prev_val_ + 25);
-//		motor_out_->set(prev_val_);
-
-		// !!!!!!!!!!!!!!!!!!! UCOMMENT ME
 		motor_out_->set(0);
 	}
 
 private:
 	StepperOut* motor_out_;
 
-	float prev_val_ = 0;
-
+	float prev_val_;
 	BiQuadLpf motor_out_lpf_;
 
 	Config_BalancingConfig* settings_;
@@ -256,9 +251,9 @@ public:
 
 		switch (current_state) {
 		case State::Stopped:
-			motor1_.set(0);
-			motor2_.set(0);
-			motor3_.set(0);
+			motor1_.reset();
+			motor2_.reset();
+			motor3_.reset();
 
 			speed1_ = speed2_ = speed3_ = 0;
 
