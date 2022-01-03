@@ -123,6 +123,8 @@ void initRx() {
 	NVIC_Init(&NVIC_InitStructure);
 }
 
+uint8_t debug_stream_type = 0;
+
 int main(void) {
   SystemInit();
 
@@ -192,6 +194,10 @@ int main(void) {
   StepperOut motor2(1);
   StepperOut motor3(2);
 
+  motor1.set(0);
+  motor2.set(0);
+  motor3.set(0);
+
   initRx();
 
   led_controller_init();
@@ -228,19 +234,19 @@ int main(void) {
     IWDG_ReloadCounter();
     led_controller_update();
 
-    if ((uint16_t)(millis() - last_check_time) > 100u) {
+    if ((uint16_t)(millis() - last_check_time) > 50u) {
       last_check_time = millis();
 
       led_controller_set_state(vesc.mc_values_.rpm, imu.angles[ANGLE_DRIVE]);
-      switch (cfg.misc.log_type) {
+      switch (debug_stream_type) {
         case 1:
           debug[write_pos++] = (int8_t)imu.angles[ANGLE_DRIVE];
           break;
         case 2:
-          debug[write_pos++] = 0;
+          debug[write_pos++] = (int8_t) (main_ctrl.right / 10);
           break;
         case 3:
-          debug[write_pos++] = (int8_t)(imu.angles[ANGLE_DRIVE] * 10);
+          debug[write_pos++] = (int8_t) (main_ctrl.fwd / 10);
           break;
         case 4:
           debug[write_pos++] = (int8_t)(vesc.mc_values_.avg_motor_current);
@@ -310,10 +316,10 @@ int main(void) {
         Stats stats = Stats_init_default;
         stats.drive_angle = imu.angles[ANGLE_DRIVE];
         stats.stear_angle = imu.angles[ANGLE_STEER];
-        stats.pad_pressure1 = rxVals[0];
-        stats.pad_pressure1 = rxVals[1];
-        stats.batt_current = rxVals[0];
-        stats.batt_voltage = rxVals[1];
+        stats.pad_pressure1 = main_ctrl.right;
+        stats.pad_pressure1 = main_ctrl.fwd;
+        stats.batt_current = main_ctrl.speed1_;
+        stats.batt_voltage = main_ctrl.speed2_;
 //        stats.batt_current = vesc.mc_values_.avg_input_current;
 //        stats.batt_voltage = vesc.mc_values_.v_in;
         stats.motor_current = vesc.mc_values_.avg_motor_current;
@@ -332,6 +338,15 @@ int main(void) {
         }
         break;
       }
+
+      case RequestId_SET_DEBUG_STREAM_ID:
+      	if (comms.data_len() == 1) {
+      		debug_stream_type = comms.data()[0];
+      	} else {
+      		comms.SendMsg(ReplyId_GENERIC_FAIL);
+      	}
+      	break;
+
 
       case RequestId_CALLIBRATE_ACC:
         comms.SendMsg(ReplyId_GENERIC_OK);

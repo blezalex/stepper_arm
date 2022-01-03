@@ -47,13 +47,11 @@ public:
 		}
 
 		iterations_between_steps[idx_] = delay_iters;
-		if (current_interation[idx_] > delay_iters) {
-			current_interation[idx_] = delay_iters;
-		}
 
 		if (forward[idx_] != requested_fwd) {
 			forward[idx_] = requested_fwd;
 			GPIO_WriteBit(kDirPorts[idx_], kDirPins[idx_], (BitAction)requested_fwd);
+			current_interation[idx_] = 0;
 		}
 
 	}
@@ -282,8 +280,7 @@ public:
 			//float yaw = yaw_pid_controler_.compute(update.gyro[2])  * state_.start_progress();
 			float yaw = 0;// mapRcInput(rxVals[4]) * 10;
 
-			float fwd;
-			float right;
+
 			if (current_state == State::Starting){
 				speed1_ = speed2_ = speed3_ = 0;
 				fwd = pitch_balancer_.computeStarting(imu_.angles[1] - fwdTargetAngle, update.gyro[1], state_.start_progress());
@@ -298,6 +295,8 @@ public:
 			float acc_2 = yaw + cos(radians(120)) * right - sin(radians(120)) * fwd;
 		  float acc_3 = yaw + cos(radians(120)) * right + sin(radians(120)) * fwd;
 
+		  /// TOODO: LPF on speed!
+
 		  speed1_ += acc_1;
 		  speed2_ += acc_2;
 		  speed3_ += acc_3;
@@ -310,13 +309,10 @@ public:
 		}
 	}
 
-	uint32_t debug0() {
-		return debug0_;
-	}
 
-
-private:
-	uint32_t debug0_;
+public:
+	float fwd;
+	float right;
 
 	Config* settings_;
 	IMU& imu_;

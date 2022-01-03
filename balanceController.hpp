@@ -36,9 +36,13 @@ public:
 	float calcRatePid(float rateRequest,  float rate) {
 		float error = rateRequest * 100 - rate;
 		float d_term  = error - prev_error_;
+		d_term = constrain(d_term, -settings_->balance_settings.balance_d_param_limiter, settings_->balance_settings.balance_d_param_limiter);
 		prev_error_ = error;
 		d_term = d_lpf_.compute(d_term);
-		return rate_pid_.compute(error, d_term);
+		float result = rate_pid_.compute(error, d_term);
+
+		result = constrain(result, -settings_->balance_settings.max_update_limiter, settings_->balance_settings.max_update_limiter);
+		return result;
 	}
 
 	// Compute torque needed while board in normal mode.
