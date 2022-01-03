@@ -91,6 +91,8 @@ uint8_t write_pos = 0;
 uint8_t read_pos = 0;
 static uint8_t debug[200];
 
+static Communicator comms;
+
 void applyCalibrationConfig(const Config &cfg, Mpu *accGyro) {
   int16_t acc_offsets[3] = {(int16_t)cfg.callibration.acc_x,
                             (int16_t)cfg.callibration.acc_y,
@@ -219,7 +221,7 @@ int main(void) {
 
   accGyro.setListener(&main_ctrl);
 
-  Communicator comms(&Serial1);
+  comms.Init(&Serial1);
   uint16_t last_check_time = 0;
 
   write_pos = 0;
