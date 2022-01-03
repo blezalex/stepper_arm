@@ -17,7 +17,6 @@ public:
 		angle_pid_.reset();
 		rate_pid_.reset();
 		d_lpf_.reset();
-		max_D_multiplier_so_far_ = 0;
 		prev_error_ = 0;
 	}
 
@@ -41,7 +40,8 @@ public:
 		d_term = d_lpf_.compute(d_term);
 		float result = rate_pid_.compute(error, d_term);
 
-		result = constrain(result, -settings_->balance_settings.max_update_limiter, settings_->balance_settings.max_update_limiter);
+		// shared with balance_settings.max_update_limiter ConstrainedOut
+		// result = constrain(result, -settings_->balance_settings.max_update_limiter, settings_->balance_settings.max_update_limiter);
 		return result;
 	}
 
@@ -66,7 +66,6 @@ public:
 
 private:
 	const Config* settings_;
-	float max_D_multiplier_so_far_ = 0;
 	BiQuadLpf d_lpf_;
 	PidController angle_pid_;
 	PidController rate_pid_;

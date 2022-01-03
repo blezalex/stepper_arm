@@ -220,7 +220,7 @@ int main(void) {
 
 
 
-  BoardController main_ctrl(&cfg, imu, &motor1, &motor2, &motor3, status_led, beeper, guards,
+  static BoardController main_ctrl(&cfg, imu, &motor1, &motor2, &motor3, status_led, beeper, guards,
                             guards_count, green_led, &vesc);
 
   accGyro.setListener(&main_ctrl);
@@ -234,7 +234,7 @@ int main(void) {
     IWDG_ReloadCounter();
     led_controller_update();
 
-    if ((uint16_t)(millis() - last_check_time) > 50u) {
+    if ((uint16_t)(millis() - last_check_time) > 100u) {
       last_check_time = millis();
 
       led_controller_set_state(vesc.mc_values_.rpm, imu.angles[ANGLE_DRIVE]);
@@ -318,8 +318,8 @@ int main(void) {
         stats.stear_angle = imu.angles[ANGLE_STEER];
         stats.pad_pressure1 = main_ctrl.right;
         stats.pad_pressure1 = main_ctrl.fwd;
-        stats.batt_current = main_ctrl.speed1_;
-        stats.batt_voltage = main_ctrl.speed2_;
+        stats.batt_current = main_ctrl.motor1_.get();
+        stats.batt_voltage = main_ctrl.motor2_.get();
 //        stats.batt_current = vesc.mc_values_.avg_input_current;
 //        stats.batt_voltage = vesc.mc_values_.v_in;
         stats.motor_current = vesc.mc_values_.avg_motor_current;
