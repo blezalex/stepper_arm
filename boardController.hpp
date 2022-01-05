@@ -206,7 +206,7 @@ public:
 private:
 	Config_BalancingConfig* settings_;
 	StepperOut* motor_out_;
-	// This lpfs compensate for body inertia. Also compensates for motor inertia. Note that those values a very different, maybe 2 lpfs would work better.
+	// This lpf is to smoooth out motor output so stepper does not get spikes and does not skip steps.
 	BiQuadLpf motor_out_lpf_;
 };
 
@@ -227,7 +227,8 @@ public:
 		status_led_(status_led),
 		beeper_(beeper),
 		green_led_(green_led),
-
+		fwd_lpf_(&settings->misc.throttle_rc),
+		right_lpf_(&settings->misc.throttle_rc),
 		vesc_(vesc) {
 	}
 
@@ -259,6 +260,9 @@ public:
 			motor2_.reset();
 			motor3_.reset();
 
+			fwd_lpf_.reset();
+			right_lpf_.reset();
+
 			pitch_balancer_.reset();
 			roll_balancer_.reset();
 			yaw_pid_controler_.reset();
@@ -287,6 +291,14 @@ public:
 			fwd *= settings_->balance_settings.usart_control_scaling;
 			right *= settings_->balance_settings.usart_control_scaling;
 
+		  if (current_state != State::Starting) {
+		  	fwd += fwd_lpf_.getVal();
+		  	right += right_lpf_.getVal();
+
+		  	fwd_lpf_.compute(fwd);
+		  	right_lpf_.compute(right);
+		  }
+
 			float acc_1 = yaw + right;
 			float acc_2 = yaw + cos(radians(120)) * right - sin(radians(120)) * fwd;
 		  float acc_3 = yaw + cos(radians(120)) * right + sin(radians(120)) * fwd;
@@ -294,13 +306,6 @@ public:
 		  float speed1 = acc_1;
 		  float speed2 = acc_2;
 		  float speed3 = acc_3;
-
-		  if (current_state != State::Starting) {
-		  	// accumulate speed when running
-		  	speed1+= motor1_.get();
-		  	speed2+= motor2_.get();
-		  	speed3+= motor3_.get();
-		  }
 
 			motor1_.set(speed1);
 			motor2_.set(speed2);
@@ -331,6 +336,9 @@ public:
 
 	GenericOut& green_led_;
 
+	// These lpfs compensate for body inertia.
+	BiQuadLpf fwd_lpf_;
+	BiQuadLpf right_lpf_;
 
 	VescComm* vesc_;
 	int vesc_update_cycle_ctr_ = 0;
