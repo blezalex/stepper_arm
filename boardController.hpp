@@ -29,18 +29,14 @@ public:
 	}
 
 	void set(float v_steps_sec) {
-		last_set[idx_] = v_steps_sec;
-		if (fabs(v_steps_sec) <  ((float)kSAMPLING_FREQ_HZ / std::numeric_limits<uint16_t>::max() )) {
-			// Stopped
-			iterations_between_steps[idx_] = std::numeric_limits<uint16_t>::max();
+		if (fabsf(v_steps_sec) < kMinStepsSec) {
+			// Requested speed is too slow. Also protects from division by zero.
+			iterations_between_steps[idx_] = std::numeric_limits<uint32_t>::max();
 			current_interation[idx_] = 0;
 			return;
 		}
 
-		bool requested_fwd = v_steps_sec > 0;
-
-		int16_t	delay_iters = abs(kSAMPLING_FREQ_HZ / v_steps_sec);
-
+		uint32_t delay_iters = abs(kSAMPLING_FREQ_HZ / v_steps_sec);
 		if (delay_iters < 1) {
 			// Max speed reached
 			delay_iters = 1;
@@ -48,30 +44,24 @@ public:
 
 		iterations_between_steps[idx_] = delay_iters;
 
+		const bool requested_fwd = v_steps_sec > 0;
 		if (forward[idx_] != requested_fwd) {
 			forward[idx_] = requested_fwd;
 			GPIO_WriteBit(kDirPorts[idx_], kDirPins[idx_], (BitAction)requested_fwd);
 			current_interation[idx_] = 0;
 		}
-
-	}
-
-	float get() {
-		return last_applied[idx_];
 	}
 
 
+	static constexpr int32_t kSAMPLING_FREQ_HZ = 100000l;
+	static constexpr float kMinStepsSec = (float)kSAMPLING_FREQ_HZ / std::numeric_limits<uint32_t>::max();
+	static constexpr int32_t kMOTOR_CNT = 3;
 
-	static constexpr int16_t kSAMPLING_FREQ_HZ = 20000;
-	static constexpr int16_t kMOTOR_CNT = 3;
 
-	static float last_set[kMOTOR_CNT];
-	static float last_applied[kMOTOR_CNT];
-
-	static uint16_t iterations_between_steps[kMOTOR_CNT];
+	static uint32_t iterations_between_steps[kMOTOR_CNT];
 	static bool forward[kMOTOR_CNT];
 	static bool next_iter_completes_step[kMOTOR_CNT];
-	static uint16_t current_interation[kMOTOR_CNT];
+	static uint32_t current_interation[kMOTOR_CNT];
 
 	static constexpr GPIO_TypeDef* kDirPorts[kMOTOR_CNT] = { GPIOA, GPIOB, GPIOB };
 	static constexpr uint16_t kDirPins[kMOTOR_CNT] = { GPIO_Pin_11, GPIO_Pin_7, GPIO_Pin_9 };
@@ -81,18 +71,17 @@ public:
 
 	static void UpdateStates() {
 		for (size_t motor_idx = 0; motor_idx < kMOTOR_CNT;  motor_idx++) {
-			uint16_t& current_iter = current_interation[motor_idx];
+			uint32_t& current_iter = current_interation[motor_idx];
 			current_iter++;
 
 			if (next_iter_completes_step[motor_idx]) {
 				GPIO_SetBits(kStepPorts[motor_idx], kStepPins[motor_idx]);
-				last_applied[motor_idx] = last_set[motor_idx];
 				next_iter_completes_step[motor_idx] = false;
 				continue;
 			}
 
-			uint16_t interval = iterations_between_steps[motor_idx];
-//			if (interval == std::numeric_limits<uint16_t>::max()) {
+			uint32_t interval = iterations_between_steps[motor_idx];
+//			if (interval == std::numeric_limits<uint32_t>::max()) {
 //				// stopped motor;
 //				continue;
 //			}
@@ -130,7 +119,7 @@ public:
 		TIM_TimeBaseStructInit(&TimerBaseInit);
 		TIM_TimeBaseStructInit(&TimerBaseInit);
 		TimerBaseInit.TIM_Prescaler =  SystemCoreClock / 1000000 - 1; // 1us tick ;
-		TimerBaseInit.TIM_Period = 50; // 20kHz
+		TimerBaseInit.TIM_Period = 10; // 100kHz
 		TimerBaseInit.TIM_CounterMode = TIM_CounterMode_Up;
 		TIM_TimeBaseInit(TIM4,&TimerBaseInit);
 		TIM_Cmd(TIM4, ENABLE);
@@ -160,14 +149,10 @@ extern "C" void TIM4_IRQHandler()
 	StepperOut::UpdateStates();
 }
 
-uint16_t StepperOut::iterations_between_steps[kMOTOR_CNT];
-uint16_t StepperOut::current_interation[kMOTOR_CNT];
+uint32_t StepperOut::iterations_between_steps[kMOTOR_CNT];
+uint32_t StepperOut::current_interation[kMOTOR_CNT];
 bool StepperOut::forward[kMOTOR_CNT];
 bool StepperOut::next_iter_completes_step[kMOTOR_CNT];
-
-
-float StepperOut::last_set[kMOTOR_CNT];
-float StepperOut::last_applied[kMOTOR_CNT];
 
 constexpr GPIO_TypeDef* StepperOut::kDirPorts[kMOTOR_CNT];
 constexpr uint16_t StepperOut::kDirPins[kMOTOR_CNT];
@@ -206,7 +191,7 @@ public:
 private:
 	Config_BalancingConfig* settings_;
 	StepperOut* motor_out_;
-	// This lpf is to smoooth out motor output so stepper does not get spikes and does not skip steps.
+	// This lpf is to smooth out motor output so stepper does not get spikes and does not skip steps.
 	BiQuadLpf motor_out_lpf_;
 };
 
