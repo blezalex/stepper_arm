@@ -28,12 +28,14 @@ public:
 		case 0: return applyExpoReal(p_input, settings_->balance_settings.balance_expo);
 		case 1: return applyExpoNatural(p_input, settings_->balance_settings.balance_expo);
 		case 2: return applyExpoPoly(p_input, settings_->balance_settings.balance_expo);
-		default: while(1);
+		default: return p_input;
 		}
 	}
 
 	float calcRatePid(float rateRequest,  float rate) {
-		float error = rateRequest * 100 - rate;
+		rateRequest = constrain(rateRequest, -settings_->misc.speed_input_mixin, settings_->misc.speed_input_mixin);
+
+		float error = rateRequest * 400 - rate;
 		float d_term  = error - prev_error_;
 		d_term = constrain(d_term, -settings_->balance_settings.balance_d_param_limiter, settings_->balance_settings.balance_d_param_limiter);
 		prev_error_ = error;

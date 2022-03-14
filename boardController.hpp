@@ -261,7 +261,7 @@ public:
 			float rightTargetAngle = mapRcInput(rxVals[0]) * 5;
 			
 			//float yaw = yaw_pid_controler_.compute(update.gyro[2])  * state_.start_progress();
-			float yaw = 0;// mapRcInput(rxVals[4]) * 10;
+			float yaw = mapRcInput(rxVals[3]) * 1500;
 
 
 			if (current_state == State::Starting){
@@ -284,13 +284,9 @@ public:
 		  	right_lpf_.compute(right);
 		  }
 
-			float acc_1 = yaw + right;
-			float acc_2 = yaw + cos(radians(120)) * right - sin(radians(120)) * fwd;
-		  float acc_3 = yaw + cos(radians(120)) * right + sin(radians(120)) * fwd;
-
-		  float speed1 = acc_1;
-		  float speed2 = acc_2;
-		  float speed3 = acc_3;
+			float speed1 = yaw + right;
+			float speed2 = yaw + cos(radians(120)) * right - sin(radians(120)) * fwd;
+		  float speed3 = yaw + cos(radians(120)) * right + sin(radians(120)) * fwd;
 
 			motor1_.set(speed1);
 			motor2_.set(speed2);
