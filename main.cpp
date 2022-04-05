@@ -86,7 +86,7 @@ class InitWaiter : public UpdateListener {
   Guard *angle_guard_;
 };
 
-static uint8_t scratch[256];
+static uint8_t scratch[512];
 
 uint8_t write_pos = 0;
 uint8_t read_pos = 0;
