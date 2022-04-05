@@ -1,12 +1,13 @@
-#include "misc.h"
-#include "stm32f10x.h"
-#include "stm32f10x_dma.h"
-#include "stm32f10x_exti.h"
-#include "stm32f10x_flash.h"
-#include "stm32f10x_gpio.h"
-#include "stm32f10x_i2c.h"
-#include "stm32f10x_iwdg.h"
-#include "stm32f10x_rcc.h"
+#include "stm_lib/inc/misc.h"
+#include "cmsis_boot/stm32f10x.h"
+#include "stm_lib/inc/stm32f10x_dma.h"
+#include "stm_lib/inc/stm32f10x_exti.h"
+#include "stm_lib/inc/stm32f10x_flash.h"
+#include "stm_lib/inc/stm32f10x_gpio.h"
+#include "stm_lib/inc/stm32f10x_i2c.h"
+#include "stm_lib/inc/stm32f10x_iwdg.h"
+#include "stm_lib/inc/stm32f10x_rcc.h"
+#include "stm_lib/inc/stm32f10x_adc.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -31,7 +32,7 @@
 #include "lpf.hpp"
 #include "pid.hpp"
 #include "stateTracker.hpp"
-#include "stm32f10x_adc.h"
+
 
 extern "C" void EXTI15_10_IRQHandler(void) {
   if (EXTI_GetITStatus(MPU6050_INT_Exti))  // MPU6050_INT

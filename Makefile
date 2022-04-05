@@ -9,7 +9,7 @@ PROTO_CODE=drv/comms/protocol.pb.c
 
 HDRS := $(wildcard *.h) $(wildcard *.hpp) $(wildcard */*.h) $(wildcard */*.hpp) $(wildcard */*/*.h) $(wildcard */*/*.hpp) $(wildcard */*/*/*.h) $(wildcard */*/*/*.hpp)
 SRCS := $(wildcard *.cpp) $(wildcard io/*.cpp) $(wildcard imu/*.cpp) $(wildcard guards/*.cpp) $(wildcard drv/vesc/*.cpp) $(wildcard drv/settings/*.cpp) $(wildcard drv/mpu6050/*.cpp) $(wildcard drv/led/*.cpp) ${STM32_KIT} ${PROTO_CODE} ${PROTO_LIB}
-INC:=..\nanopb-0.3.9.2-windows-x86 drv cmsis_boot drv\vesc drv\comms stm_lib stm_lib\inc cmsis .
+INC:=..\nanopb-0.3.9.2-windows-x86 drv cmsis_boot drv/vesc drv/comms stm_lib/inc cmsis .
 INC_PARAMS=$(INC:%=-I%)
 
 CC = arm-none-eabi-gcc

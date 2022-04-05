@@ -1,5 +1,5 @@
-#include "stm32f10x_tim.h"
-#include "stm32f10x_rcc.h"
+#include "stm_lib/inc/stm32f10x_tim.h"
+#include "stm_lib/inc/stm32f10x_rcc.h"
 
 #define MILLIS_TIMER TIM2
 #define MILLIS_TIMER_PERIPH RCC_APB1Periph_TIM2

@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-#include "stm32f10x.h"
+#include "cmsis_boot/stm32f10x.h"
 #include "arduino.h"
 
 

@@ -11,10 +11,10 @@
 #include "io/genericOut.hpp"
 #include "io/pwm_out.hpp"
 
-#include "stm32f10x.h"
-#include "stm32f10x_tim.h"
-#include "stm32f10x_rcc.h"
-#include "stm32f10x_gpio.h"
+#include "cmsis_boot/stm32f10x.h"
+#include "stm_lib/inc/stm32f10x_tim.h"
+#include "stm_lib/inc/stm32f10x_rcc.h"
+#include "stm_lib/inc/stm32f10x_gpio.h"
 #include "io/rx.h"
 
 #define BRAKE_VIA_USART
