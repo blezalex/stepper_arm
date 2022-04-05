@@ -9,3 +9,5 @@ build/*
 *.su
 *.o
 
+drv/comms/protocol.pb.c
+drv/comms/protocol.pb.h
