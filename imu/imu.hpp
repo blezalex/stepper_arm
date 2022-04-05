@@ -2,7 +2,7 @@
 #ifndef IMU_H
 #define IMU_H
 
-#include "Arduino.h"
+#include "arduino.h"
 #include "global.h"
 #include "drv/mpu6050/mpu.hpp"
 #include "MadgwickAHRS.hpp"
