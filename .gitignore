@@ -5,3 +5,7 @@ BalancingController.comemgui
 BalancingController.comarker
 BalancingController.cogui
 
+build/*
+*.su
+*.o
+
