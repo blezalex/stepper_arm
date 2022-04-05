@@ -35,12 +35,23 @@ $(BUILD_DIR)/%.cpp.o: %.cpp ${HDRS}
 ${BUILD_DIR}/BalancingController.elf: $(OBJS) link.ld
 	$(CC) ${ARCH} -g -flto -Wl,-Map=${BUILD_DIR}/BalancingController.map -O2 -Wl,--gc-sections -Wl,--entry=main -Wl,-T./link.ld -g -o $@ $(OBJS) -lm -lgcc -lc -lstdc++
 
+${BUILD_DIR}/BalancingController.bin: ${BUILD_DIR}/BalancingController.elf
+	arm-none-eabi-objcopy -O binary ${BUILD_DIR}/BalancingController.elf $@
+
+${BUILD_DIR}/BalancingController.hex: ${BUILD_DIR}/BalancingController.elf
+	arm-none-eabi-objcopy -O ihex ${BUILD_DIR}/BalancingController.elf $@
+
+
 
 # TODO1: Port generate bat.
 # TODO2: Add program step
 # TODO3: Figure out CooCox references.
 
 
-.PHONY: clean
+.PHONY: clean program
 clean:
 	rm -r $(BUILD_DIR)
+
+program: ${BUILD_DIR}/BalancingController.elf
+	"C:/CooCox/CoIDE/bin\coflash.exe" program STM32F103CB $< --adapter-name=ST-Link --port=SWD --adapter-clk=2000000 --erase=affected --reset=SYSRESETREQ --driver="C:/CooCox/CoIDE/flash/STM32F10x_MD_128.elf" --verify=false 
+
